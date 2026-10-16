@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import '../systems/preference.dart';
 import '../systems/receipt_recognition.dart';
 import '../systems/slip_storage.dart';
 import '../systems/thai_date.dart';
 import '../systems/amount_format.dart';
+import '../systems/slip_image.dart';
 import 'package:moneyplus_material/l10n/app_localizations.dart';
 
 class DashboardTab extends StatefulWidget {
@@ -53,8 +53,8 @@ class _DashboardTabState extends State<DashboardTab> {
   Future<void> _editBudget() async {
     final previous = _budget;
     _budgetController.text = _budget > 0
-      ? formatAmount(_budget, decimalDigits: 2)
-      : '';
+        ? formatAmount(_budget, decimalDigits: 2)
+        : '';
 
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
@@ -120,8 +120,8 @@ class _DashboardTabState extends State<DashboardTab> {
                 autofocus: true,
                 decoration: InputDecoration(
                   labelText: l10n.dashboard_history_label,
-                  errorText: showErrors &&
-                          _customLabelController.text.trim().isEmpty
+                  errorText:
+                      showErrors && _customLabelController.text.trim().isEmpty
                       ? l10n.dashboard_history_label_error
                       : null,
                 ),
@@ -138,7 +138,8 @@ class _DashboardTabState extends State<DashboardTab> {
                 decoration: InputDecoration(
                   labelText: l10n.dashboard_history_amount,
                   prefixText: '฿ ',
-                  errorText: showErrors &&
+                  errorText:
+                      showErrors &&
                           (double.tryParse(
                                     _customAmountController.text
                                         .trim()
@@ -232,8 +233,8 @@ class _DashboardTabState extends State<DashboardTab> {
     final l10n = AppLocalizations.of(context)!;
     final currentAmount = amountOf(item);
     _customAmountController.text = currentAmount == null
-      ? ''
-      : formatAmount(currentAmount, decimalDigits: 2);
+        ? ''
+        : formatAmount(currentAmount, decimalDigits: 2);
     var showError = false;
 
     final amount = await showDialog<double>(
@@ -294,10 +295,7 @@ class _DashboardTabState extends State<DashboardTab> {
       }
 
       final updated = [...saved];
-      updated[index] = {
-        ...updated[index],
-        'amount': amount.toStringAsFixed(2),
-      };
+      updated[index] = {...updated[index], 'amount': amount.toStringAsFixed(2)};
       await saveSlips(updated);
       if (!mounted) return;
       setState(() => _history = _sortedByTime(updated));
@@ -618,55 +616,12 @@ class _DashboardTabState extends State<DashboardTab> {
     );
   }
 
-  void _showSlipImage(Map<String, dynamic> item) {
-    final imagePath = item['imagePath']?.toString() ?? '';
-    final rawAmount = (item['amount'] ?? '').toString();
-    final l10n = AppLocalizations.of(context)!;
-
-    showDialog<void>(
-      context: context,
-      builder: (context) => Dialog(
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: InteractiveViewer(
-                child: Image.file(
-                  File(imagePath),
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Text(l10n.dashboard_image_not_found),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Text(
-                rawAmount == 'Not Found'
-                    ? l10n.common_amount_not_found
-                  : l10n.dashboard_amount_read(formatAmountText(rawAmount)),
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.common_close),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildHistoryTile(Map<String, dynamic> item) {
     final l10n = AppLocalizations.of(context)!;
     final rawAmount = (item['amount'] ?? '').toString();
     final displayAmount = rawAmount == 'Not Found'
-      ? l10n.common_amount_not_found
-      : '-฿${formatAmountText(rawAmount)}';
+        ? l10n.common_amount_not_found
+        : '-฿${formatAmountText(rawAmount)}';
 
     final txTime = DateTime.tryParse(item['txTime']?.toString() ?? '');
     final subtitle = txTime != null
@@ -675,7 +630,7 @@ class _DashboardTabState extends State<DashboardTab> {
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      onTap: item['custom'] == true ? null : () => _showSlipImage(item),
+      onTap: item['custom'] == true ? null : () => showSlipImage(context, item),
       leading: CircleAvatar(
         backgroundColor: Colors.deepPurple.shade50,
         child: const Icon(Icons.receipt_long, color: Colors.deepPurple),
