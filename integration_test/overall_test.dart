@@ -16,6 +16,8 @@ Future<AppLocalizations> pumpApp(
   await tester.pumpAndSettle();
   if (screen == 'dashboard') {
     await tester.tap(find.byIcon(Icons.dashboard));
+  } else if (screen == 'plan') {
+    await tester.tap(find.byIcon(Icons.account_balance_wallet));
   } else if (screen == 'bill') {
     await tester.tap(find.byIcon(Icons.request_quote));
   }
@@ -82,9 +84,7 @@ void main() {
       }
     });
 
-    testWidgets('Edit work correctly', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('Edit work correctly', (WidgetTester tester) async {
       for (final locale in AppLocalizations.supportedLocales) {
         final l10n = await pumpApp(tester, locale, 'dashboard');
 
@@ -103,9 +103,7 @@ void main() {
       }
     });
 
-    testWidgets('Add work correctly', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('Add work correctly', (WidgetTester tester) async {
       for (final locale in AppLocalizations.supportedLocales) {
         final l10n = await pumpApp(tester, locale, 'dashboard');
 
@@ -123,6 +121,64 @@ void main() {
 
         expect(find.text('-฿999.99'), findsWidgets);
         expect(find.text('TestTest'), findsWidgets);
+      }
+    });
+  });
+
+  group('Plan Page Test', () {
+    testWidgets('Add new plan correctly', (WidgetTester tester) async {
+      for (final locale in AppLocalizations.supportedLocales) {
+        final l10n = await pumpApp(tester, locale, 'plan');
+
+        await tester.tap(find.text(l10n.plan_add_goal));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField).at(0), 'Test Plan');
+        await tester.enterText(find.byType(TextField).at(1), '67.67');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(l10n.common_create));
+        await tester.pumpAndSettle();
+
+        expect(find.text('฿0 / ฿67.67'), findsWidgets);
+      }
+    });
+
+    testWidgets('Plan removes correctly', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 10000);
+      addTearDown(tester.view.reset);
+
+      for (final locale in AppLocalizations.supportedLocales) {
+        final l10n = await pumpApp(tester, locale, 'plan');
+
+        await tester.tap(find.text(l10n.plan_add_goal));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField).at(0), 'Delete Me');
+        await tester.enterText(find.byType(TextField).at(1), '100');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(l10n.common_create));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Delete Me'));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.plan_remaining('100')), findsOneWidget);
+        expect(find.text(l10n.plan_payments(0)), findsOneWidget);
+
+        await tester.tap(find.text(l10n.plan_delete_goal));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(l10n.plan_delete_goal_confirm('Delete Me')),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text(l10n.common_delete));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Delete Me'), findsNothing, reason: '$locale');
       }
     });
   });
