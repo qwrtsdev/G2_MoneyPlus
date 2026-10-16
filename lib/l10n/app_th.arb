@@ -1,11 +1,9 @@
 {
   "@@locale": "th",
-
   "nav_dashboard": "หน้าหลัก",
   "nav_plan": "แผน",
   "nav_bill": "บิล",
   "nav_settings": "ตั้งค่า",
-
   "common_cancel": "ยกเลิก",
   "common_ok": "ตกลง",
   "common_close": "ปิด",
@@ -14,7 +12,6 @@
   "common_clear": "ล้าง",
   "common_no_items": "ยังไม่มีรายการ",
   "common_amount_not_found": "ไม่พบยอด",
-
   "dashboard_appbar": "หน้าหลัก",
   "dashboard_enter_amount": "กรอกจำนวนเงิน",
   "dashboard_add_history": "เพิ่มประวัติรายการ",
@@ -28,10 +25,12 @@
   "dashboard_add_history_error": "เพิ่มประวัติไม่สำเร็จ: {error}",
   "@dashboard_add_history_error": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
-  "dashboard_loading_slips": "กำลังโหลดสลีป กรุณารอสักครู่",
+  "dashboard_loading_slips": "กำลังโหลดสลีป หากเป็นครั้งแรกอาจใช้เวลาสักครู่",
   "dashboard_load_error": "โหลดสลิปไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
   "dashboard_clear_title": "ล้างประวัติรายการ",
   "dashboard_clear_confirm": "ต้องการลบรายการที่บันทึกไว้ทั้งหมดหรือไม่?",
@@ -44,7 +43,6 @@
   "dashboard_last_updated": "อัพเดทล่าสุด: {date}",
   "dashboard_image_not_found": "ไม่พบไฟล์รูปภาพ",
   "dashboard_amount_read": "ยอดที่อ่านได้: ฿{amount}",
-
   "plan_appbar": "สมดุลเงิน",
   "plan_weekly_usage": "ยอดใช้จ่ายรายสัปดาห์",
   "plan_weekly_total": "รวมสัปดาห์นี้: ฿{amount}",
@@ -65,7 +63,6 @@
   "plan_goal_reached": "ครบตามเป้าหมายแล้ว",
   "plan_remaining": "เหลืออีก ฿{amount}",
   "plan_payments": "รายการที่จ่าย ({count})",
-
   "bill_appbar": "หารบิล",
   "bill_phone_label": "เบอร์โทรศัพท์พร้อมเพย์",
   "bill_phone_error": "กรุณากรอกเบอร์โทรศัพท์",
@@ -86,7 +83,6 @@
   "bill_share_text": "QR พร้อมเพย์ ยอด ฿{amount}",
   "bill_share_text_split": "QR พร้อมเพย์ ยอด ฿{amount} (หารระหว่าง {count} คน)",
   "bill_share_error": "แชร์ QR Code ไม่สำเร็จ: {error}",
-
   "settings_appbar": "ตั้งค่า",
   "settings_system_default": "ค่าเริ่มต้นของระบบ",
   "settings_text_size": "ขนาดตัวอักษร",

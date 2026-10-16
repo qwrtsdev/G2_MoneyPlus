@@ -82,7 +82,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashboard_loading_slips => 'Loading slips, please wait';
+  String get dashboard_loading_slips =>
+      'Loading slips. The first time may take a while';
 
   @override
   String get dashboard_load_error => 'Couldn\'t load slips. Please try again.';

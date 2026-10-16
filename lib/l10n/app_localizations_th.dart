@@ -82,7 +82,8 @@ class AppLocalizationsTh extends AppLocalizations {
   }
 
   @override
-  String get dashboard_loading_slips => 'กำลังโหลดสลีป กรุณารอสักครู่';
+  String get dashboard_loading_slips =>
+      'กำลังโหลดสลีป หากเป็นครั้งแรกอาจใช้เวลาสักครู่';
 
   @override
   String get dashboard_load_error => 'โหลดสลิปไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';

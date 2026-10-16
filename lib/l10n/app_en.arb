@@ -36,7 +36,7 @@
       "error": { "type": "String" }
     }
   },
-  "dashboard_loading_slips": "Loading slips, please wait",
+  "dashboard_loading_slips": "Loading slips. The first time may take a while",
   "dashboard_load_error": "Couldn't load slips. Please try again.",
   "dashboard_clear_title": "Clear history",
   "dashboard_clear_confirm": "Delete all saved items?",

@@ -239,7 +239,7 @@ abstract class AppLocalizations {
   /// No description provided for @dashboard_loading_slips.
   ///
   /// In en, this message translates to:
-  /// **'Loading slips, please wait'**
+  /// **'Loading slips. The first time may take a while'**
   String get dashboard_loading_slips;
 
   /// No description provided for @dashboard_load_error.
