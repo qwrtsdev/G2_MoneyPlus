@@ -333,7 +333,7 @@ class _DashboardTabState extends State<DashboardTab> {
     );
 
     try {
-      final updated = await processNewSlips(limit: 10);
+      final updated = await processNewSlips();
       if (!mounted) return;
       setState(() {
         _history = _sortedByTime(updated);

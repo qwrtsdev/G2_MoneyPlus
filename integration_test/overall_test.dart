@@ -80,7 +80,7 @@ void main() {
           const Duration(minutes: 2),
         );
 
-        expect(find.byType(ListTile), findsNWidgets(10), reason: '$locale');
+        expect(find.byType(ListTile), findsWidgets, reason: '$locale');
       }
     });
 
