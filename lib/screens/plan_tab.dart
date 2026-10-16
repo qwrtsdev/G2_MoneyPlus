@@ -6,6 +6,7 @@ import '../systems/plan_storage.dart';
 import '../systems/slip_storage.dart';
 import '../systems/thai_date.dart';
 import '../systems/amount_format.dart';
+import '../systems/slip_image.dart';
 
 String _money(double value) {
   return formatAmount(
@@ -51,7 +52,9 @@ class _PlanTabState extends State<PlanTab> {
     final pending = slips
         .where(
           (slip) =>
-              amountOf(slip) != null && !assigned.contains(slip['imagePath']),
+              amountOf(slip) != null &&
+              slip['dismissed'] != true &&
+              !assigned.contains(slip['imagePath']),
         )
         .toList();
     pending.sort((a, b) {
@@ -82,7 +85,14 @@ class _PlanTabState extends State<PlanTab> {
   Future<void> _showGoalDetail(Map<String, dynamic> goal) async {
     final deleted = await showDialog<bool>(
       context: context,
-      builder: (context) => _GoalDetailDialog(goal: goal),
+      builder: (context) => _GoalDetailDialog(
+        goals: _goals,
+        goalId: goal['id'],
+        onSave: (goals) async {
+          await saveGoals(goals);
+          await _load();
+        },
+      ),
     );
     if (deleted != true) return;
 
@@ -93,22 +103,34 @@ class _PlanTabState extends State<PlanTab> {
   Future<void> _showPendingSheet() async {
     final slip = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
-      builder: (context) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text(
-                AppLocalizations.of(context)!.plan_pick_slip,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Text(
+                  AppLocalizations.of(context)!.plan_pick_slip,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-            ..._pendingSlips.map((slip) => _buildPendingTile(context, slip)),
-          ],
+              ..._pendingSlips.map(
+                (slip) => _buildPendingTile(context, slip, () async {
+                  await _dismissSlip(slip);
+                  if (!context.mounted) return;
+                  if (_pendingSlips.isEmpty) {
+                    Navigator.pop(context);
+                  } else {
+                    setSheetState(() {});
+                  }
+                }),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -117,7 +139,27 @@ class _PlanTabState extends State<PlanTab> {
     await _assignSlip(slip);
   }
 
-  Widget _buildPendingTile(BuildContext context, Map<String, dynamic> slip) {
+  /// Hides [slip] from the pending list without deleting it from history.
+  Future<void> _dismissSlip(Map<String, dynamic> slip) async {
+    final saved = await loadSavedSlips();
+    final updated = saved
+        .map(
+          (record) =>
+              record['imagePath'] == slip['imagePath'] &&
+                  record['txTime'] == slip['txTime']
+              ? {...record, 'dismissed': true}
+              : record,
+        )
+        .toList();
+    await saveSlips(updated);
+    await _load();
+  }
+
+  Widget _buildPendingTile(
+    BuildContext context,
+    Map<String, dynamic> slip,
+    VoidCallback onDismiss,
+  ) {
     final txTime = DateTime.tryParse('${slip['txTime']}');
 
     return ListTile(
@@ -132,11 +174,26 @@ class _PlanTabState extends State<PlanTab> {
             : '-',
         style: TextStyle(fontSize: 12),
       ),
-      trailing: Text(
-        '฿${formatAmountText('${slip['amount']}')}',
-        style: TextStyle(fontWeight: FontWeight.w600),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '฿${formatAmountText('${slip['amount']}')}',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          IconButton(
+            icon: const Icon(Icons.drive_file_move_outline),
+            tooltip: AppLocalizations.of(context)!.plan_which_goal,
+            onPressed: () => Navigator.pop(context, slip),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+            onPressed: onDismiss,
+          ),
+        ],
       ),
-      onTap: () => Navigator.pop(context, slip),
+      onTap: slip['custom'] == true ? null : () => showSlipImage(context, slip),
     );
   }
 
@@ -235,7 +292,9 @@ class _PlanTabState extends State<PlanTab> {
       color: theme.colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withAlpha(128)),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withAlpha(128),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -495,10 +554,160 @@ class _NewGoalDialogState extends State<_NewGoalDialog> {
   }
 }
 
-class _GoalDetailDialog extends StatelessWidget {
-  const _GoalDetailDialog({required this.goal});
+class _GoalDetailDialog extends StatefulWidget {
+  const _GoalDetailDialog({
+    required this.goals,
+    required this.goalId,
+    required this.onSave,
+  });
 
-  final Map<String, dynamic> goal;
+  final List<Map<String, dynamic>> goals;
+  final Object? goalId;
+  final Future<void> Function(List<Map<String, dynamic>> goals) onSave;
+
+  @override
+  State<_GoalDetailDialog> createState() => _GoalDetailDialogState();
+}
+
+class _GoalDetailDialogState extends State<_GoalDetailDialog> {
+  late List<Map<String, dynamic>> _goals = widget.goals;
+
+  Map<String, dynamic> get _goal =>
+      _goals.firstWhere((g) => g['id'] == widget.goalId);
+
+  String get _name => '${_goal['name']}';
+
+  Future<void> _save(List<Map<String, dynamic>> goals) async {
+    await widget.onSave(goals);
+    if (mounted) setState(() => _goals = goals);
+  }
+
+  /// Replaces this goal's payments with [payments].
+  List<Map<String, dynamic>> _withPayments(
+    List<Map<String, dynamic>> goals,
+    Object? goalId,
+    List<Map<String, dynamic>> payments,
+  ) {
+    return goals
+        .map((g) => g['id'] == goalId ? {...g, 'payments': payments} : g)
+        .toList();
+  }
+
+  Future<void> _removePayment(int index) async {
+    final payments = goalPayments(_goal)..removeAt(index);
+    await _save(_withPayments(_goals, widget.goalId, payments));
+  }
+
+  Future<void> _movePayment(int index) async {
+    final l10n = AppLocalizations.of(context)!;
+    if (_goals.length < 2) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.plan_create_goal_first)));
+      return;
+    }
+
+    final target = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(l10n.plan_which_goal),
+        children: _goals
+            .where((g) => g['id'] != widget.goalId)
+            .map(
+              (goal) => SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, goal),
+                child: Text('${goal['name']}'),
+              ),
+            )
+            .toList(),
+      ),
+    );
+    if (target == null) return;
+
+    final payments = goalPayments(_goal);
+    final payment = payments.removeAt(index);
+    var goals = _withPayments(_goals, widget.goalId, payments);
+    goals = _withPayments(goals, target['id'], [
+      ...goalPayments(target),
+      payment,
+    ]);
+    await _save(goals);
+  }
+
+  Future<void> _rename() async {
+    final l10n = AppLocalizations.of(context)!;
+    final formKey = GlobalKey<FormState>();
+    var name = _name;
+
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.plan_goal_name),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            initialValue: _name,
+            autofocus: true,
+            decoration: const InputDecoration(border: OutlineInputBorder()),
+            onChanged: (value) => name = value,
+            validator: (value) => value == null || value.trim().isEmpty
+                ? l10n.plan_goal_name_error
+                : null,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.common_cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(context, name.trim());
+              }
+            },
+            child: Text(l10n.common_ok),
+          ),
+        ],
+      ),
+    );
+    if (newName == null || newName == _name) return;
+
+    await _save(
+      _goals
+          .map((g) => g['id'] == widget.goalId ? {...g, 'name': newName} : g)
+          .toList(),
+    );
+  }
+
+  Widget _buildPaymentTile(int index, Map<String, dynamic> payment) {
+    final amount = _money((payment['amount'] as num).toDouble());
+
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      onTap: '${payment['imagePath'] ?? ''}'.isEmpty
+          ? null
+          : () => showSlipImage(context, {...payment, 'amount': amount}),
+      leading: const Icon(Icons.receipt_long, color: Colors.deepPurple),
+      title: Text('฿$amount'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.drive_file_move_outline),
+            tooltip: AppLocalizations.of(context)!.plan_which_goal,
+            onPressed: () => _movePayment(index),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+            onPressed: () => _removePayment(index),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _confirmDelete(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
@@ -506,7 +715,7 @@ class _GoalDetailDialog extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.plan_delete_goal),
-        content: Text(l10n.plan_delete_goal_confirm('${goal['name']}')),
+        content: Text(l10n.plan_delete_goal_confirm(_name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -528,6 +737,7 @@ class _GoalDetailDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final goal = _goal;
     final progress = goalProgress(goal);
     final saved = goalSaved(goal);
     final target = goalTarget(goal);
@@ -540,12 +750,24 @@ class _GoalDetailDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              '${goal['name']}',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    _name,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: l10n.plan_goal_name,
+                  onPressed: _rename,
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             SizedBox(
               width: 120,
               height: 120,
@@ -600,20 +822,8 @@ class _GoalDetailDialog extends StatelessWidget {
                     )
                   : ListView(
                       shrinkWrap: true,
-                      children: payments
-                          .map(
-                            (payment) => ListTile(
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(
-                                Icons.receipt_long,
-                                color: Colors.deepPurple,
-                              ),
-                              title: Text(
-                                '฿${_money((payment['amount'] as num).toDouble())}',
-                              ),
-                            ),
-                          )
+                      children: payments.indexed
+                          .map((entry) => _buildPaymentTile(entry.$1, entry.$2))
                           .toList(),
                     ),
             ),
