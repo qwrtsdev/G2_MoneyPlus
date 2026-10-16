@@ -638,21 +638,50 @@ class _GoalDetailDialogState extends State<_GoalDetailDialog> {
     final l10n = AppLocalizations.of(context)!;
     final formKey = GlobalKey<FormState>();
     var name = _name;
+    var target = goalTarget(_goal);
 
-    final newName = await showDialog<String>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.plan_goal_name),
         content: Form(
           key: formKey,
-          child: TextFormField(
-            initialValue: _name,
-            autofocus: true,
-            decoration: const InputDecoration(border: OutlineInputBorder()),
-            onChanged: (value) => name = value,
-            validator: (value) => value == null || value.trim().isEmpty
-                ? l10n.plan_goal_name_error
-                : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                initialValue: _name,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: l10n.plan_goal_name,
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: (value) => name = value,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? l10n.plan_goal_name_error
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                initialValue: target.toString(),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: l10n.plan_goal_target,
+                  prefixText: '฿ ',
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: (value) => target = double.tryParse(value.trim()) ?? 0,
+                validator: (value) {
+                  final amount = double.tryParse(value?.trim() ?? '');
+                  if (amount == null || amount <= 0) {
+                    return l10n.plan_goal_target_error;
+                  }
+                  return null;
+                },
+              ),
+            ],
           ),
         ),
         actions: [
@@ -663,7 +692,7 @@ class _GoalDetailDialogState extends State<_GoalDetailDialog> {
           FilledButton(
             onPressed: () {
               if (formKey.currentState!.validate()) {
-                Navigator.pop(context, name.trim());
+                Navigator.pop(context, {'name': name.trim(), 'target': target});
               }
             },
             child: Text(l10n.common_ok),
@@ -671,11 +700,19 @@ class _GoalDetailDialogState extends State<_GoalDetailDialog> {
         ],
       ),
     );
-    if (newName == null || newName == _name) return;
+    if (result == null) return;
+
+    final nextName = (result['name'] as String).trim();
+    final nextTarget = (result['target'] as num).toDouble();
+    if (nextName == _name && nextTarget == goalTarget(_goal)) return;
 
     await _save(
       _goals
-          .map((g) => g['id'] == widget.goalId ? {...g, 'name': newName} : g)
+          .map(
+            (g) => g['id'] == widget.goalId
+                ? {...g, 'name': nextName, 'target': nextTarget}
+                : g,
+          )
           .toList(),
     );
   }
