@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:moneyplus_material/l10n/app_localizations.dart';
 import 'amount_format.dart';
 
-/// Shows the slip's original image with the amount read from it.
 void showSlipImage(BuildContext context, Map<String, dynamic> item) {
   final imagePath = item['imagePath']?.toString() ?? '';
   final rawAmount = (item['amount'] ?? '').toString();
