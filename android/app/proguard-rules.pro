@@ -4,6 +4,9 @@
 -dontwarn com.google.mlkit.vision.text.japanese.**
 -dontwarn com.google.mlkit.vision.text.korean.**
 
+# permission_handler (this is the one behind the MissingPluginException)
+-keep class com.baseflow.permissionhandler.** { *; }
+
 # Optionally keep the core plugin classes from being stripped
 -keep class com.google_mlkit_text_recognition.** { *; }
 
